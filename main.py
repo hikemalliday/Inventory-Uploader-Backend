@@ -1,28 +1,9 @@
-import os
-
-from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Request
+from fastapi import FastAPI, Depends, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from sqlalchemy import (
-    create_engine,
-    MetaData,
-)
-
-
-from sqlalchemy.orm import sessionmaker
-
-from sqlalchemy.ext.declarative import declarative_base
-
-
 import sqlite3
 from auth import AuthHandler
 from schemas import AuthDetails
 
-engine = create_engine("sqlite:///./.venv/server/master.db")
-metadata = MetaData()
-Base = declarative_base()
-Session = sessionmaker(bind=engine)
-session = Session()
 auth_handler = AuthHandler()
 app = FastAPI()
 
@@ -44,11 +25,6 @@ app.add_middleware(
 )
 
 
-class InventoryUpload(BaseModel):
-    file: UploadFile
-    username: str
-
-
 def create_connection(db_file):
     conn = None
     try:
@@ -56,7 +32,6 @@ def create_connection(db_file):
         return conn
     except Exception as e:
         print(e)
-
     return conn
 
 
@@ -129,7 +104,6 @@ create_username_and_password_table()
 
 @app.post("/signup", status_code=201)
 def register(body: dict):
-    # Fetch / GET table 'users', and append the col 'usernames' in the list:
     conn = create_connection("./master.db")
     c = conn.cursor()
     c.execute("SELECT username from username_and_password")
@@ -179,7 +153,7 @@ def login(auth_details: AuthDetails):
             auth_details.password, found_user["hashed_password"]
         )
     )
-    # We need to GET the hashed password from the SQL db, and pass it as second parameter below where 'found_user' is:
+
     if (found_user is None) or (
         not auth_handler.verify_password(
             auth_details.password, found_user["hashed_password"]
@@ -188,10 +162,8 @@ def login(auth_details: AuthDetails):
         print("debug test")
         raise HTTPException(status_code=401, detail="Invalid password")
     token = auth_handler.encode_token(found_user["username"])
-
     create_inventory_table(auth_details.username)
     inventory_db = fetch_inventory(auth_details.username)
-
     return {"token": token, "loggedIn": True, "inventory_db": inventory_db}
 
 
@@ -203,13 +175,12 @@ def protected(username=Depends(auth_handler.auth_wrapper)):
 
 @app.post("/uploadfile")
 async def parse_inventory_file(request: Request):
-    # Batch needs username appended to the front
     form_data = await request.form()
     print(form_data)
     file = form_data["file"]
     filename = form_data["filename"]
     username = form_data["username"]
-    # Delete the old inventory
+
     delete_inventory(username, filename)
     inventory_file_raw = file.file.read()
 
