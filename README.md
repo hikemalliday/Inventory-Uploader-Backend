@@ -5,7 +5,7 @@
 [Front End](https://github.com/hikemalliday/Inventory-Uploader-Frontend/)
 
 ###### Docker Hub: 
-https://hub.docker.com/repository/docker/hikemalliday/inventory-uploader-backend/general
+https://hub.docker.com/r/hikemalliday/inventory-uploader-backend
 
 Handles login / signup with PyJWT. Stores the user's encrypted password in a SQlite db.
 
